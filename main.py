@@ -99,3 +99,27 @@ def keep_alive():
 
 keep_alive()
 bot.run(TOKEN)
+# Parancs: !ping -> Pong!
+@bot.command()
+async def ping(ctx):
+    await ctx.send("Pong!")
+
+# Parancs: !status -> Összegzi az elérhetőségeket
+@bot.command()
+async def status(ctx):
+    status_message = ""
+    for product in products:
+        status_message += f"**{product['name']}**: {'Elérhető ✅' if product_status[product['url']] else 'Nem elérhető ❌'}\n"
+    await ctx.send(status_message)
+
+# Parancs: !help -> Lista a parancsokról
+@bot.command()
+async def helpme(ctx):
+    help_text = """
+    **Elérhető parancsok:**
+    `!ping` → Válasz: Pong!
+    `!status` → Kiírja az összes figyelt Labubu státuszát.
+    `!helpme` → Ez a parancs.
+    """
+    await ctx.send(help_text)
+
