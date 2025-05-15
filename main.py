@@ -8,8 +8,7 @@ chrome_options.add_argument("--headless")
 chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--disable-dev-shm-usage")
 
-# chrome_options.binary_location = "/usr/bin/google-chrome"   # EZT KOMMENTELD
-chrome_options.binary_location = "/usr/bin/chromium-browser"  # EZT HASZNÁLD
+chrome_options.binary_location = "/usr/bin/chromium"
 
 # ÚJ: Service objektum létrehozása és átadása helyesen
 service = Service(ChromeDriverManager().install())
