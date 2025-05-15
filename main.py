@@ -3,6 +3,8 @@ from discord.ext import commands
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from flask import Flask
 from threading import Thread
 from datetime import datetime
@@ -10,7 +12,6 @@ import asyncio
 import time
 import os
 
-# TOKEN a környezeti változóból
 TOKEN = os.getenv("DISCORD_TOKEN")
 CHANNEL_ID = 1372233638355402856
 
@@ -24,16 +25,27 @@ products = [
     {"name": "Labubu Bird", "url": "https://popmart.eu/products/the-monsters-birdy-vinyl-face-blind-box"},
     {"name": "Labubu Hunter", "url": "https://popmart.eu/products/the-monsters-hunter-vinyl-face-blind-box"},
 ]
+
 product_status = {product["url"]: False for product in products}
 last_check_time = None
 
 def check_labubu_stock_selenium(driver, url):
     try:
         driver.get(url)
-        if driver.find_elements(By.XPATH, "//div[contains(text(), 'ADD TO CART')]") or driver.find_elements(By.XPATH, "//div[contains(text(), 'BUY NOW')]"):
-            return True
-        else:
-            return False
+        # Várunk max 15 másodpercet, amíg megjelenik a gomb
+        WebDriverWait(driver, 15).until(
+            EC.presence_of_element_located((By.XPATH, "//div[contains(@class, 'index_btn__w5nKF')]"))
+        )
+        # Ellenőrizzük a gombokat
+        buttons = driver.find_elements(By.XPATH, "//div[contains(@class, 'index_btn__w5nKF')]")
+        for button in buttons:
+            text = button.text.strip().lower()
+            if "buy now" in text:
+                print(f"{url} - KÉSZLETEN (gomb szöveg: '{text}').")
+                return True
+        print(f"{url} - NEM található BUY NOW gomb, vagy más szöveg van.")
+        return False
+
     except Exception as e:
         print(f"Hiba a Selenium ellenőrzés során: {e}")
         return False
