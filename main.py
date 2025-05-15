@@ -67,21 +67,21 @@ async def labubu_checker():
             print(f"{product['name']} változatlan ({'elérhető' if product_status[product['url']] else 'nem elérhető'}).")
 
 def check_labubu_stock(url):
-    response = requests.get(url)
-    soup = BeautifulSoup(response.text, 'html.parser')
-
-    button = soup.find('div', class_='index_btn__w5nKF')
-    if button:
-        class_list = button.get('class', [])
-        if any('disabled' in cls for cls in class_list):
-            print(f"{url} - NEM elérhető (disabled gomb).")
+    try:
+        response = requests.get(url)
+        print(f"HTTP státusz: {response.status_code} - {url}")
+        if response.status_code != 200:
             return False
-        else:
-            print(f"{url} - KÉSZLETEN (gomb aktív).")
+        if "ADD TO CART" in response.text.upper():
+            print(f"{url} - KÉSZLETEN (Add to Cart gomb megtalálva).")
             return True
-    else:
-        print(f"{url} - NEM található a gomb!")
+        else:
+            print(f"{url} - NEM elérhető (nincs Add to Cart).")
+            return False
+    except Exception as e:
+        print(f"HIBA a lekérdezésnél: {e}")
         return False
+
 
 # Parancs: !ping -> Pong!
 @bot.command()
