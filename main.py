@@ -72,17 +72,15 @@ def check_labubu_stock(url):
         print(f"HTTP státusz: {response.status_code} - {url}")
         if response.status_code != 200:
             return False
-       if "ADD TO CART" in response.text.upper() or "BUY NOW" in response.text.upper():
-            print(f"{url} - KÉSZLETEN (Add to Cart gomb megtalálva).")
+        if "ADD TO CART" in response.text.upper() or "BUY NOW" in response.text.upper():
+            print(f"{url} - KÉSZLETEN (Add to Cart vagy Buy Now gomb megtalálva).")
             return True
         else:
-            print(f"{url} - NEM elérhető (nincs Add to Cart).")
+            print(f"{url} - NEM elérhető (nincs Add to Cart vagy Buy Now).")
             return False
     except Exception as e:
         print(f"HIBA a lekérdezésnél: {e}")
         return False
-
-
 # Parancs: !ping -> Pong!
 @bot.command()
 async def ping(ctx):
