@@ -66,7 +66,7 @@ async def labubu_checker():
             product_status[product['url']] = False
         else:
             print(f"{product['name']} változatlan ({'elérhető' if product_status[product['url']] else 'nem elérhető'}).")
-
+        
 def check_labubu_stock_selenium(url):
     try:
         options = Options()
@@ -86,6 +86,11 @@ def check_labubu_stock_selenium(url):
             print(f"{url} - NEM elérhető (Selenium szerint nincs gomb)")
             driver.quit()
             return False
+    
+    except Exception as e:
+        print(f"Hiba a Selenium lekérdezés során: {e}")
+        driver.quit()
+        return False
 # Parancs: !ping -> Pong!
 @bot.command()
 async def ping(ctx):
