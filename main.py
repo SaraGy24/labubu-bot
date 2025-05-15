@@ -33,7 +33,7 @@ DISCORD_CHANNEL_ID = 123456789012345678  # Cseréld ki a saját csatorna ID-re
 PRODUCTS = [
     {"name": "Labubu Macaron", "url": "https://popmart.eu/products/the-monsters-exciting-macaron-vinyl-face-blind-box"},
     {"name": "Labubu Cola", "url": "https://popmart.eu/products/the-monsters-coca-cola-series-vinyl-face-blind-box"},
-    {"name": "Labubu Bird", "url": "https://popmart.eu/products/the-monsters-birdy-vinyl-face-blind-box"},
+    {"name": "Labubu BIE", "url": "https://www.popmart.com/hu/products/1991"},
     {"name": "Labubu Hunter", "url": "https://popmart.eu/products/the-monsters-hunter-vinyl-face-blind-box"},
 ]
 
