@@ -4,6 +4,7 @@ import requests
 from bs4 import BeautifulSoup
 from flask import Flask
 from threading import Thread
+from selenium import webdriver
 
 import os
 
@@ -66,21 +67,25 @@ async def labubu_checker():
         else:
             print(f"{product['name']} változatlan ({'elérhető' if product_status[product['url']] else 'nem elérhető'}).")
 
-def check_labubu_stock(url):
+def check_labubu_stock_selenium(url):
     try:
-        response = requests.get(url)
-        print(f"HTTP státusz: {response.status_code} - {url}")
-        if response.status_code != 200:
-            return False
-        if 'index_euBtn__7NmZ6 index_red__kx6Ql' in response.text or 'index_euBtn__7NmZ6 index_black__RgEgP' in response.text:
-            print(f"{url} - KÉSZLETEN (class alapján gomb megtalálva).")
+        options = Options()
+        options.add_argument("--headless")
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        driver = webdriver.Chrome(options=options)
+
+        driver.get(url)
+
+        # Próbálja megkeresni az "ADD TO CART" vagy "BUY NOW" gombot
+        if driver.find_elements(By.XPATH, "//div[contains(text(), 'ADD TO CART')]") or driver.find_elements(By.XPATH, "//div[contains(text(), 'BUY NOW')]"):
+            print(f"{url} - KÉSZLETEN (Selenium észlelte a gombot)")
+            driver.quit()
             return True
         else:
-            print(f"{url} - NEM elérhető (class alapján nincs gomb).")
+            print(f"{url} - NEM elérhető (Selenium szerint nincs gomb)")
+            driver.quit()
             return False
-    except Exception as e:
-        print(f"HIBA a lekérdezésnél: {e}")
-        return False
 # Parancs: !ping -> Pong!
 @bot.command()
 async def ping(ctx):
