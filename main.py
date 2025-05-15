@@ -72,7 +72,7 @@ def check_labubu_stock(url):
         print(f"HTTP státusz: {response.status_code} - {url}")
         if response.status_code != 200:
             return False
-        if "ADD TO CART" in response.text.upper():
+       if "ADD TO CART" in response.text.upper() or "BUY NOW" in response.text.upper():
             print(f"{url} - KÉSZLETEN (Add to Cart gomb megtalálva).")
             return True
         else:
