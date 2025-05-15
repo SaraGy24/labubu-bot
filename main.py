@@ -72,11 +72,11 @@ def check_labubu_stock(url):
         print(f"HTTP státusz: {response.status_code} - {url}")
         if response.status_code != 200:
             return False
-        if "ADD TO CART" in response.text.upper() or "BUY NOW" in response.text.upper():
-            print(f"{url} - KÉSZLETEN (Add to Cart vagy Buy Now gomb megtalálva).")
+        if 'index_euBtn__7NmZ6 index_red__kx6Ql' in response.text or 'index_euBtn__7NmZ6 index_black__RgEgP' in response.text:
+            print(f"{url} - KÉSZLETEN (class alapján gomb megtalálva).")
             return True
         else:
-            print(f"{url} - NEM elérhető (nincs Add to Cart vagy Buy Now).")
+            print(f"{url} - NEM elérhető (class alapján nincs gomb).")
             return False
     except Exception as e:
         print(f"HIBA a lekérdezésnél: {e}")
