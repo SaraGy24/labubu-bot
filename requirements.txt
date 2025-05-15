@@ -2,3 +2,4 @@ discord.py
 requests
 beautifulsoup4
 flask
+selenium
