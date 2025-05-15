@@ -1,3 +1,18 @@
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from webdriver_manager.chrome import ChromeDriverManager
+
+chrome_options = Options()
+chrome_options.add_argument("--headless")
+chrome_options.add_argument("--no-sandbox")
+chrome_options.add_argument("--disable-dev-shm-usage")
+
+# Ha Google Chrome-ot telepítesz:
+chrome_options.binary_location = "/usr/bin/google-chrome"
+# Ha Chromiumot:
+# chrome_options.binary_location = "/usr/bin/chromium-browser"
+
+driver = webdriver.Chrome(ChromeDriverManager().install(), options=chrome_options)
 import os
 import discord
 from discord.ext import commands, tasks
