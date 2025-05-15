@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 from flask import Flask
 from threading import Thread
 
-TOKEN = "MTM3MjIzMDA3MzEwODY2NDUxMg.G2dAyk.am7L6hW5_IwZcx3-vzjfqWGwT0HRLNJt_3XR_4"
+TOKEN = os.getenv("DISCORD_TOKEN")
 
 intents = discord.Intents.default()
 intents.message_content = True
