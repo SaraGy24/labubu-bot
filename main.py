@@ -40,14 +40,13 @@ async def ping(ctx):
     await ctx.send("🏓 Pong!")
 
 @bot.command()
-async def help(ctx):
-    help_text = (
+async def helpme(ctx):
+    helpme_text = (
         "**Elérhető parancsok:**\n"
         "`!ping` → Válaszol Pong!\n"
-        "`!help` → Parancsok listája.\n"
         "`!stock` → Összes termék aktuális állapota időbélyeggel.\n"
     )
-    await ctx.send(help_text)
+    await ctx.send(helpme_text)
 
 @bot.command()
 async def stock(ctx):
