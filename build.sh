@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Telepítjük a Chromiumot headless módban való futtatáshoz
 
-echo "Installing Chromium..."
+echo "Installing Chromium and Chromedriver..."
 apt-get update
-apt-get install -y chromium-browser
-echo "Chromium installed!"
-
+apt-get install -y chromium chromium-driver
+echo "Chromium and Chromedriver installed!"
+which chromium
+which chromedriver
