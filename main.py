@@ -66,21 +66,42 @@ async def labubu_checker():
             print(f"{product['name']} változatlan ({'elérhető' if product_status[product['url']] else 'nem elérhető'}).")
 
 def check_labubu_stock(url):
-    response = requests.get(url)
-    soup = BeautifulSoup(response.text, 'html.parser')
-
-    button = soup.find('div', class_='index_btn__w5nKF')
-    if button:
-        class_list = button.get('class', [])
-        if any('disabled' in cls for cls in class_list):
-            print(f"{url} - NEM elérhető (disabled gomb).")
-            return False
-        else:
-            print(f"{url} - KÉSZLETEN (gomb aktív).")
-            return True
-    else:
-        print(f"{url} - NEM található a gomb!")
+    try:
+        response = requests.get(url, timeout=5)
+        response.raise_for_status()
+    except requests.RequestException as e:
+        print(f"Hiba a kérés során: {e}")
         return False
+
+    soup = BeautifulSoup(response.text, 'html.parser')
+    
+    # Keresd a gombot, amiben "BUY NOW" vagy "NOTIFY ME WHEN AVAILABLE" van
+    buy_now_button = soup.find('div', class_='index_red__kx6Ql')
+    if buy_now_button:
+        text = buy_now_button.get_text(strip=True).lower()
+        if "buy now" in text:
+            print(f"{url} - KÉSZLETEN (buy now gomb).")
+            return True
+        else:
+            print(f"{url} - KÉSZLETEN (piros gomb, de szöveg eltér: {text})")
+            return True  # Class alapján készleten lehet, ha bizonytalan is
+    else:
+        # Másik lehetőség: keresünk bármilyen gombot és nézzük a szöveget
+        button = soup.find('button')
+        if button:
+            text = button.get_text(strip=True).lower()
+            if "notify me when available" in text or "értesíts" in text:
+                print(f"{url} - NEM elérhető (notify me).")
+                return False
+            elif "buy now" in text:
+                print(f"{url} - KÉSZLETEN (buy now).")
+                return True
+            else:
+                print(f"{url} - Gomb szöveg ismeretlen: '{text}'")
+                return False
+        else:
+            print(f"{url} - NEM található gomb.")
+            return False
 
 # Keep-alive trükk
 app = Flask('')
