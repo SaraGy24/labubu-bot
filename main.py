@@ -1,121 +1,120 @@
-import os
 import discord
-from discord.ext import commands, tasks
-import requests
-from bs4 import BeautifulSoup
+from discord.ext import commands
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options
 from flask import Flask
 from threading import Thread
+from datetime import datetime
+import asyncio
+import time
+import os
 
+# TOKEN a környezeti változóból
 TOKEN = os.getenv("DISCORD_TOKEN")
+CHANNEL_ID = 1372233638355402856
 
 intents = discord.Intents.default()
 intents.message_content = True
-
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 products = [
-    {
-        "name": "Big Into Energy Labubu",
-        "image": "https://prod-eurasian-res.popmart.com/default/20250422_091913_954253____1_____1200x1200.jpg",
-        "url": "https://www.popmart.com/hu/products/1991"
-    },
-    {
-        "name": "Exciting Macaron",
-        "image": "https://prod-eurasian-res.popmart.com/default/20231026_101051_200156__1200x1200.jpg",
-        "url": "https://www.popmart.com/hu/products/527/THE-MONSTERS---Exciting-Macaron-Vinyl-Face-Blind-Box"
-    },
-    {
-        "name": "Have a Seat",
-        "image": "https://prod-eurasian-res.popmart.com/default/20240710_104422_660558____1_____1200x1200.jpg",
-        "url": "https://www.popmart.com/hu/products/1194/THE-MONSTERS---Have-a-Seat-Vinyl-Plush-Blind-Box"
-    },
-    {
-        "name": "Coca-Cola Labubu",
-        "image": "https://prod-eurasian-res.popmart.com/default/20241217_163807_637795____1_____1200x1200.jpg",
-        "url": "https://www.popmart.com/hu/products/1625/THE-MONSTERS-COCA-COLA-SERIES-Vinyl-Face-Blind-Box"
-    }
+    {"name": "Labubu Macaron", "url": "https://popmart.eu/products/the-monsters-exciting-macaron-vinyl-face-blind-box"},
+    {"name": "Labubu Cola", "url": "https://popmart.eu/products/the-monsters-coca-cola-series-vinyl-face-blind-box"},
+    {"name": "Labubu Bird", "url": "https://popmart.eu/products/the-monsters-birdy-vinyl-face-blind-box"},
+    {"name": "Labubu Hunter", "url": "https://popmart.eu/products/the-monsters-hunter-vinyl-face-blind-box"},
 ]
+product_status = {product["url"]: False for product in products}
+last_check_time = None
 
-# Emlékeztető a termék állapotához
-product_status = {product['url']: False for product in products}
-
-@bot.event
-async def on_ready():
-    print(f'Bejelentkezve mint: {bot.user.name}')
-    labubu_checker.start()
-
-@tasks.loop(seconds=10)
-async def labubu_checker():
-    channel = bot.get_channel(1372233638355402856)  # IDE a saját csatorna ID-d!
-    for product in products:
-        available = check_labubu_stock(product["url"])
-        if available and not product_status[product['url']]:
-            embed = discord.Embed(
-                title=f"{product['name']} elérhető!",
-                description=f"[Nézd meg itt]({product['url']})",
-                color=0xffcc00
-            )
-            embed.set_image(url=product['image'])
-            await channel.send("@everyone", embed=embed)
-            print(f"{product['name']} ELÉRHETŐ! Üzenet elküldve.")
-            product_status[product['url']] = True
-        elif not available and product_status[product['url']]:
-            print(f"{product['name']} kifogyott.")
-            product_status[product['url']] = False
-        else:
-            print(f"{product['name']} változatlan ({'elérhető' if product_status[product['url']] else 'nem elérhető'}).")
-
-def check_labubu_stock(url):
+def check_labubu_stock_selenium(driver, url):
     try:
-        response = requests.get(url, timeout=5)
-        response.raise_for_status()
-    except requests.RequestException as e:
-        print(f"Hiba a kérés során: {e}")
-        return False
-
-    soup = BeautifulSoup(response.text, 'html.parser')
-    
-    # Keresd a gombot, amiben "BUY NOW" vagy "NOTIFY ME WHEN AVAILABLE" van
-    buy_now_button = soup.find('div', class_='index_red__kx6Ql')
-    if buy_now_button:
-        text = buy_now_button.get_text(strip=True).lower()
-        if "buy now" in text:
-            print(f"{url} - KÉSZLETEN (buy now gomb).")
+        driver.get(url)
+        if driver.find_elements(By.XPATH, "//div[contains(text(), 'ADD TO CART')]") or driver.find_elements(By.XPATH, "//div[contains(text(), 'BUY NOW')]"):
             return True
         else:
-            print(f"{url} - KÉSZLETEN (piros gomb, de szöveg eltér: {text})")
-            return True  # Class alapján készleten lehet, ha bizonytalan is
-    else:
-        # Másik lehetőség: keresünk bármilyen gombot és nézzük a szöveget
-        button = soup.find('button')
-        if button:
-            text = button.get_text(strip=True).lower()
-            if "notify me when available" in text or "értesíts" in text:
-                print(f"{url} - NEM elérhető (notify me).")
-                return False
-            elif "buy now" in text:
-                print(f"{url} - KÉSZLETEN (buy now).")
-                return True
-            else:
-                print(f"{url} - Gomb szöveg ismeretlen: '{text}'")
-                return False
-        else:
-            print(f"{url} - NEM található gomb.")
             return False
+    except Exception as e:
+        print(f"Hiba a Selenium ellenőrzés során: {e}")
+        return False
 
-# Keep-alive trükk
+async def send_stock_message(product):
+    channel = bot.get_channel(CHANNEL_ID)
+    if channel:
+        await channel.send(f"🚨 **{product['name']} ELÉRHETŐ!** {product['url']}")
+
+def labubu_checker_loop():
+    global last_check_time
+    options = Options()
+    options.add_argument("--headless=new")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-gpu")
+    driver = webdriver.Chrome(options=options)
+
+    while True:
+        last_check_time = datetime.now()
+        print(f"[{last_check_time.strftime('%Y-%m-%d %H:%M:%S')}] ▶ Labubu stock ellenőrzés indul...")
+
+        for product in products:
+            print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] ➡ Ellenőrzés: {product['name']} - {product['url']}")
+            try:
+                result = check_labubu_stock_selenium(driver, product["url"])
+                if result and not product_status[product["url"]]:
+                    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] ✅ {product['name']} ELÉRHETŐ!")
+                    asyncio.run_coroutine_threadsafe(send_stock_message(product), bot.loop)
+                    product_status[product["url"]] = True
+                elif not result and product_status[product["url"]]:
+                    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] ❌ {product['name']} kifogyott.")
+                    product_status[product["url"]] = False
+                else:
+                    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] ➡ {product['name']} változatlan.")
+            except Exception as e:
+                print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] ⚠ Hiba a {product['name']} ellenőrzésekor: {e}")
+        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 🔁 Következő ellenőrzés 60 másodperc múlva...")
+        time.sleep(60)
+
+    driver.quit()
+
+@bot.command()
+async def ping(ctx):
+    await ctx.send("Pong!")
+
+@bot.command()
+async def status(ctx):
+    status_message = f"🕒 Utolsó ellenőrzés: {last_check_time.strftime('%Y-%m-%d %H:%M:%S') if last_check_time else 'Még nem volt ellenőrzés'}\n\n"
+    for product in products:
+        status_message += f"**{product['name']}**: {'Elérhető ✅' if product_status[product['url']] else 'Nem elérhető ❌'}\n"
+    await ctx.send(status_message)
+
+@bot.command()
+async def helpme(ctx):
+    help_text = """
+**Elérhető parancsok:**
+`!ping` → Pong!
+`!status` → Kiírja az összes figyelt termék státuszát.
+`!helpme` → Ez a parancs.
+"""
+    await ctx.send(help_text)
+
 app = Flask('')
 
 @app.route('/')
 def home():
     return "Bot él!"
 
-def run():
+def run_flask():
     app.run(host='0.0.0.0', port=8080)
 
 def keep_alive():
-    t = Thread(target=run)
+    t = Thread(target=run_flask, daemon=True)
     t.start()
+
+@bot.event
+async def on_ready():
+    print(f"🤖 Bejelentkezve mint {bot.user}")
+    Thread(target=labubu_checker_loop, daemon=True).start()
 
 keep_alive()
 bot.run(TOKEN)
+
