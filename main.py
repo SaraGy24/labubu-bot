@@ -9,6 +9,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 import os
 import time
+from datetime import datetime
+
 
 TOKEN = os.getenv("DISCORD_TOKEN")
 intents = discord.Intents.default()
@@ -46,23 +48,32 @@ def check_labubu_stock_selenium(url):
     except Exception as e:
         print(f"Hiba a Selenium ellenőrzés során: {e}")
         return False
+         
+# (a meglévő kódodban legyen globálisan ez:)
+last_check_time = None  # utolsó ellenőrzés ideje globálisan
 
 def labubu_checker_loop():
+    global last_check_time
     while True:
-        print("Labubu stock ellenőrzés indul...")
+        last_check_time = datetime.now()
+        print(f"[{last_check_time.strftime('%Y-%m-%d %H:%M:%S')}] ▶ Labubu stock ellenőrzés indul...")
+
         for product in products:
+            print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] ➡ Ellenőrzés: {product['name']} - {product['url']}")
             try:
                 result = check_labubu_stock_selenium(product["url"])
                 if result and not product_status[product["url"]]:
-                    print(f"{product['name']} ELÉRHETŐ! Üzenet elküldve.")
+                    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] ✅ {product['name']} ELÉRHETŐ! Üzenet elküldve.")
                     product_status[product["url"]] = True
                 elif not result and product_status[product["url"]]:
-                    print(f"{product['name']} kifogyott.")
+                    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] ❌ {product['name']} kifogyott.")
                     product_status[product["url"]] = False
                 else:
-                    print(f"{product['name']} változatlan.")
+                    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] ➡ {product['name']} állapota nem változott.")
             except Exception as e:
-                print(f"Hiba a termék ellenőrzésekor: {e}")
+                print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] ⚠ Hiba a {product['name']} ellenőrzésekor: {e}")
+
+        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 🔁 Következő ellenőrzés 60 másodperc múlva...")
         time.sleep(60)
 
 @bot.command()
