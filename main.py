@@ -1,12 +1,9 @@
+import os
 import discord
 from discord.ext import commands, tasks
-import requests
-from bs4 import BeautifulSoup
-from flask import Flask
-from threading import Thread
 from selenium import webdriver
-
-import os
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
 
 TOKEN = os.getenv("DISCORD_TOKEN")
 
@@ -39,81 +36,84 @@ products = [
 ]
 
 # Emlékeztető a termék állapotához
-product_status = {product['url']: False for product in products}
+product_status = {product["url"]: False for product in products}
 
-@bot.event
-async def on_ready():
-    print(f'Bejelentkezve mint: {bot.user.name}')
-    labubu_checker.start()
-
-@tasks.loop(seconds=60)
-async def labubu_checker():
-    channel = bot.get_channel(1372233638355402856)  # IDE a saját csatorna ID-d!
-    for product in products:
-        available = check_labubu_stock(product["url"])
-        if available and not product_status[product['url']]:
-            embed = discord.Embed(
-                title=f"{product['name']} elérhető!",
-                description=f"[Nézd meg itt]({product['url']})",
-                color=0xffcc00
-            )
-            embed.set_image(url=product['image'])
-            await channel.send("@everyone", embed=embed)
-            print(f"{product['name']} ELÉRHETŐ! Üzenet elküldve.")
-            product_status[product['url']] = True
-        elif not available and product_status[product['url']]:
-            print(f"{product['name']} kifogyott.")
-            product_status[product['url']] = False
-        else:
-            print(f"{product['name']} változatlan ({'elérhető' if product_status[product['url']] else 'nem elérhető'}).")
-        
 def check_labubu_stock_selenium(url):
     try:
         options = Options()
         options.add_argument("--headless")
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
-        driver = webdriver.Chrome(options=options)
 
+        driver = webdriver.Chrome(options=options)
         driver.get(url)
 
-        # Próbálja megkeresni az "ADD TO CART" vagy "BUY NOW" gombot
-        if driver.find_elements(By.XPATH, "//div[contains(text(), 'ADD TO CART')]") or driver.find_elements(By.XPATH, "//div[contains(text(), 'BUY NOW')]"):
-            print(f"{url} - KÉSZLETEN (Selenium észlelte a gombot)")
+        if driver.find_elements(By.XPATH, "//div[contains(text(), 'ADD TO CART')]") or \
+           driver.find_elements(By.XPATH, "//div[contains(text(), 'BUY NOW')]"):
+            print(f"[INFO] {url} - KÉSZLETEN (Selenium észlelte a gombot)")
             driver.quit()
             return True
         else:
-            print(f"{url} - NEM elérhető (Selenium szerint nincs gomb)")
+            print(f"[INFO] {url} - NEM elérhető (Selenium szerint nincs gomb)")
             driver.quit()
             return False
-    
     except Exception as e:
-        print(f"Hiba a Selenium lekérdezés során: {e}")
-        driver.quit()
+        print(f"[HIBA] Selenium hiba: {e}")
         return False
-# Parancs: !ping -> Pong!
+
+@tasks.loop(minutes=1)
+async def labubu_checker():
+    try:
+        print("[INFO] Labubu stock check indul...")
+
+        for product in products:
+            available = check_labubu_stock_selenium(product['url'])
+
+            if available and not product_status[product['url']]:
+                print(f"[INFO] {product['name']} ELÉRHETŐ! Üzenet elküldve.")
+                channel = bot.get_channel(YOUR_CHANNEL_ID)  # ← CSATORNA ID IDE
+                if channel:
+                    await channel.send(f"🚨 **{product['name']} ELÉRHETŐ!** {product['url']}")
+                product_status[product['url']] = True
+
+            elif not available and product_status[product['url']]:
+                print(f"[INFO] {product['name']} kifogyott.")
+                product_status[product['url']] = False
+
+            else:
+                print(f"[INFO] {product['name']} állapot változatlan.")
+
+    except Exception as e:
+        print(f"[HIBA] labubu_checker loop hibája: {e}")
+
+@bot.event
+async def on_ready():
+    print(f"[INFO] Bejelentkezve: {bot.user}")
+    if not labubu_checker.is_running():
+        labubu_checker.start()
+
 @bot.command()
 async def ping(ctx):
     await ctx.send("Pong!")
-
-# Parancs: !status -> Összegzi az elérhetőségeket
+    
 @bot.command()
 async def status(ctx):
     status_message = ""
     for product in products:
-        status_message += f"**{product['name']}**: {'Elérhető ✅' if product_status[product['url']] else 'Nem elérhető ❌'}\n"
+        status_emoji = "✅ ELÉRHETŐ" if product_status[product['url']] else "❌ NEM elérhető"
+        status_message += f"**{product['name']}** → {status_emoji}\n"
     await ctx.send(status_message)
 
-# Parancs: !help -> Lista a parancsokról
 @bot.command()
 async def helpme(ctx):
     help_text = """
     **Elérhető parancsok:**
-    `!ping` → Válasz: Pong!
-    `!status` → Kiírja az összes figyelt Labubu státuszát.
-    `!helpme` → Ez a parancs.
+    `!ping` → Ellenőrzi, hogy a bot él-e.
+    `!status` → Kiírja az összes figyelt termék aktuális státuszát.
+    `!helpme` → Ez a parancs (parancslista).
     """
     await ctx.send(help_text)
+    
 # Keep-alive trükk
 app = Flask('')
 
@@ -127,7 +127,6 @@ def run():
 def keep_alive():
     t = Thread(target=run)
     t.start()
-    
+
 keep_alive()
 bot.run(TOKEN)
-
