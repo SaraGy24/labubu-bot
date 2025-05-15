@@ -45,7 +45,7 @@ async def on_ready():
     print(f'Bejelentkezve mint: {bot.user.name}')
     labubu_checker.start()
 
-@tasks.loop(seconds=10)
+@tasks.loop(seconds=60)
 async def labubu_checker():
     channel = bot.get_channel(1372233638355402856)  # IDE a saját csatorna ID-d!
     for product in products:
